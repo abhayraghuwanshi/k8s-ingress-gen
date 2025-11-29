@@ -1,7 +1,7 @@
-import IngressGenerator from '@/components/IngressGenerator';
+import DiagramBuilder from '@/components/DiagramBuilder';
 
 const Index = () => {
-  return <IngressGenerator />;
+  return <DiagramBuilder />;
 };
 
 export default Index;
