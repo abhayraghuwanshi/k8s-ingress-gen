@@ -134,7 +134,7 @@ export default function DiagramBuilder() {
       {/* Top Navigation */}
       <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-card">
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-bold text-foreground">K8s Diagram Builder</h1>
+          <img src="/logo.png" alt="K8s Diagram Builder Logo" className="h-8" />
           <div className="h-6 w-px bg-border" />
           <div className="flex items-center gap-2">
             <button onClick={clearDiagram} className="btn-ghost">
