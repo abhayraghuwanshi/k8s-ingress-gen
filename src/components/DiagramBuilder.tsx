@@ -22,12 +22,16 @@ import { DiagramTemplate, templates } from '@/utils/templates';
 import { generateYamlFromGraph } from '@/utils/yamlGenerator';
 import {
   ChevronDown,
+  Code,
   Github,
   GraduationCap,
   LayoutTemplate,
+  Menu,
   Plus,
   Save,
-  Trash2
+  Settings,
+  Trash2,
+  X
 } from 'lucide-react';
 import K8sNode from './k8s/K8sNode';
 import NodePalette from './k8s/NodePalette';
@@ -51,6 +55,9 @@ export default function DiagramBuilder() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [showPalette, setShowPalette] = useState(false);
+  const [showYaml, setShowYaml] = useState(false);
+  const [showProperties, setShowProperties] = useState(false);
   const { toast } = useToast();
 
   // Load saved diagram on mount
@@ -131,6 +138,33 @@ export default function DiagramBuilder() {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
   }, []);
+
+  // Mobile: Add node to center of viewport on tap
+  const addNodeToCanvas = useCallback((nodeType: K8sNodeType) => {
+    if (!reactFlowInstance) return;
+
+    // Get the center of the current viewport
+    const viewport = reactFlowInstance.getViewport();
+    const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom;
+    const centerY = (window.innerHeight / 2 - viewport.y) / viewport.zoom;
+
+    const newNode: Node<K8sNodeData> = {
+      id: getNodeId(),
+      type: 'k8sNode',
+      position: { x: centerX - 90, y: centerY - 60 }, // Offset to center the node
+      data: defaultNodeData[nodeType](),
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+
+    // Close mobile palette after adding
+    setShowPalette(false);
+
+    toast({
+      title: "Node added",
+      description: `${newNode.data.label} added to canvas. Drag to reposition.`,
+    });
+  }, [reactFlowInstance, setNodes, toast]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -214,11 +248,38 @@ export default function DiagramBuilder() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Top Navigation */}
-      <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-card">
-        <div className="flex items-center gap-4">
-          <img src="/logo.png" alt="K8s Diagram Builder Logo" className="h-36" />
-          <div className="h-6 w-px bg-border" />
-          <div className="flex items-center gap-2">
+      <header className="h-14 border-b border-border flex items-center justify-between px-2 sm:px-4 bg-card">
+        <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+          <img src="/logo.png" alt="K8s Diagram Builder Logo" className="h-24 sm:h-36 flex-shrink-0" />
+          <div className="hidden sm:block h-6 w-px bg-border" />
+
+          {/* Mobile Breadcrumb - Shows selected node with quick actions */}
+          {selectedNode && (
+            <div className="md:hidden flex items-center gap-1.5 min-w-0 flex-1">
+              <button
+                onClick={() => setShowProperties(!showProperties)}
+                className="flex items-center gap-1.5 min-w-0 flex-1 px-2 py-1 bg-secondary/50 rounded-md border border-border hover:bg-secondary transition-colors"
+              >
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: `hsl(var(--node-${selectedNode.data.type}))` }} />
+                <span className="text-xs font-medium text-foreground truncate">
+                  {selectedNode.data.label}
+                </span>
+                <span className="text-xs text-muted-foreground flex-shrink-0">
+                  ({selectedNode.data.type})
+                </span>
+              </button>
+            </div>
+          )}
+          {!selectedNode && (
+            <div className="md:hidden flex items-center gap-1.5 min-w-0 flex-1">
+              <span className="text-xs text-muted-foreground truncate">
+                {nodes.length} node{nodes.length !== 1 ? 's' : ''} • {edges.length} connection{edges.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-2">
             <button onClick={clearDiagram} className="btn-ghost">
               <Plus className="w-4 h-4" />
               New
@@ -256,32 +317,90 @@ export default function DiagramBuilder() {
               Clear
             </button>
           </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setShowPalette(!showPalette)}
+            className="md:hidden btn-ghost"
+            aria-label="Toggle palette"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Mobile Action Buttons */}
+          <button
+            onClick={() => setShowProperties(!showProperties)}
+            className="md:hidden btn-ghost"
+            aria-label="Toggle properties"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setShowYaml(!showYaml)}
+            className="md:hidden btn-ghost"
+            aria-label="Toggle YAML"
+          >
+            <Code className="w-5 h-5" />
+          </button>
+
+          {/* Desktop Right Side */}
           {lastSaved && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
               <Save className="w-3 h-3 text-green-500" />
-              <span>Saved {lastSaved.toLocaleTimeString()}</span>
+              <span className="hidden lg:inline">Saved {lastSaved.toLocaleTimeString()}</span>
             </div>
           )}
           <a
             href="https://github.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-ghost"
+            className="btn-ghost hidden sm:inline-flex"
           >
             <Github className="w-4 h-4" />
           </a>
-          <span className="text-xs text-muted-foreground">v1.0.0</span>
+          <span className="text-xs text-muted-foreground hidden lg:inline">v1.0.0</span>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex min-h-0">
-        {/* Left Sidebar - Node Palette */}
-        <aside className="w-52 border-r border-border flex-shrink-0">
-          <NodePalette onDragStart={onDragStart} />
+      <div className="flex-1 flex min-h-0 relative">
+        {/* Left Sidebar - Node Palette (Desktop: always visible, Mobile: overlay) */}
+        <aside className={`
+          ${showPalette ? 'absolute' : 'hidden'}
+          md:relative md:block
+          w-52
+          border-r border-border
+          flex-shrink-0
+          bg-background
+          z-40
+          h-full
+          ${showPalette ? 'shadow-2xl' : ''}
+        `}>
+          <div className="relative h-full">
+            <button
+              onClick={() => setShowPalette(false)}
+              className="md:hidden absolute top-2 right-2 btn-ghost z-50"
+              aria-label="Close palette"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <NodePalette onDragStart={onDragStart} onNodeClick={addNodeToCanvas} />
+          </div>
         </aside>
+
+        {/* Overlay for mobile sidebars */}
+        {(showPalette || showProperties || showYaml) && (
+          <div
+            className="md:hidden fixed inset-0 bg-black/50 z-30"
+            onClick={() => {
+              setShowPalette(false);
+              setShowProperties(false);
+              setShowYaml(false);
+            }}
+          />
+        )}
 
         {/* Center - Canvas */}
         <main className="flex-1 min-w-0" ref={reactFlowWrapper}>
@@ -307,19 +426,71 @@ export default function DiagramBuilder() {
           </ReactFlow>
         </main>
 
-        {/* Right Sidebar - Properties + YAML */}
-        <aside className="w-96 border-l border-border flex-shrink-0 flex flex-col">
-          {/* Properties Panel */}
-          <div className="h-1/2 border-b border-border overflow-hidden">
-            <PropertiesPanel
-              node={selectedNode}
-              onUpdate={updateNodeData}
-              onClose={() => setSelectedNode(null)}
-            />
+        {/* Right Sidebar - Properties + YAML (Desktop: always visible, Mobile: bottom sheet) */}
+        <aside className={`
+          ${showProperties || showYaml ? 'fixed' : 'hidden'}
+          md:relative md:flex
+          ${showProperties || showYaml ? 'bottom-0 left-0 right-0' : ''}
+          md:w-96
+          ${showProperties || showYaml ? 'h-[70vh]' : 'h-auto'}
+          md:h-auto
+          border-l border-border
+          flex-shrink-0
+          flex flex-col
+          bg-background
+          z-40
+          ${showProperties || showYaml ? 'rounded-t-2xl' : ''}
+          ${showProperties || showYaml ? 'shadow-2xl' : ''}
+        `}>
+          {/* Mobile: Show either Properties or YAML based on state */}
+          <div className="md:hidden h-full flex flex-col">
+            {showProperties && (
+              <>
+                <div className="flex items-center justify-between p-3 border-b border-border flex-shrink-0">
+                  <h2 className="text-sm font-semibold">Properties</h2>
+                  <button onClick={() => setShowProperties(false)} className="btn-ghost p-1">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0 overflow-auto">
+                  <PropertiesPanel
+                    node={selectedNode}
+                    onUpdate={updateNodeData}
+                    onClose={() => {
+                      setSelectedNode(null);
+                      setShowProperties(false);
+                    }}
+                  />
+                </div>
+              </>
+            )}
+            {showYaml && (
+              <div className="h-full flex flex-col">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
+                  <h2 className="text-sm font-semibold">Generated YAML</h2>
+                  <button onClick={() => setShowYaml(false)} className="btn-ghost p-1">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0">
+                  <YamlPanel yamls={generatedYamls} />
+                </div>
+              </div>
+            )}
           </div>
-          {/* YAML Panel */}
-          <div className="h-1/2 overflow-hidden">
-            <YamlPanel yamls={generatedYamls} />
+
+          {/* Desktop: Show both Properties and YAML split */}
+          <div className="hidden md:flex md:flex-col h-full">
+            <div className="h-1/2 border-b border-border overflow-hidden">
+              <PropertiesPanel
+                node={selectedNode}
+                onUpdate={updateNodeData}
+                onClose={() => setSelectedNode(null)}
+              />
+            </div>
+            <div className="h-1/2 overflow-hidden">
+              <YamlPanel yamls={generatedYamls} />
+            </div>
           </div>
         </aside>
       </div>

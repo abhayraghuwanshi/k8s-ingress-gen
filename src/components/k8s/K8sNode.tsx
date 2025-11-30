@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import {
   Globe,
   Server,
@@ -10,7 +10,8 @@ import {
   Clock,
   Activity,
   Container,
-  Layers
+  Layers,
+  Trash2
 } from 'lucide-react';
 import { K8sNodeData, K8sNodeType } from '@/types/k8s';
 
@@ -54,10 +55,16 @@ function getNodeSummary(data: K8sNodeData): string[] {
   }
 }
 
-function K8sNode({ data, selected }: NodeProps<K8sNodeData>) {
+function K8sNode({ data, selected, id }: NodeProps<K8sNodeData>) {
+  const { deleteElements } = useReactFlow();
   const config = nodeConfig[data.type];
   const Icon = config.icon;
   const summary = getNodeSummary(data);
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteElements({ nodes: [{ id }] });
+  };
 
   return (
     <>
@@ -66,7 +73,26 @@ function K8sNode({ data, selected }: NodeProps<K8sNodeData>) {
         position={Position.Top}
         className="!bg-muted-foreground !border-card"
       />
-      <div className={`node-base ${config.bgClass} ${selected ? 'ring-2 ring-primary' : ''}`}>
+      <div className={`node-base ${config.bgClass} ${selected ? 'ring-2 ring-primary' : ''} group relative`}>
+        {/* Delete button - shows on hover or when selected */}
+        <button
+          onClick={handleDelete}
+          className={`
+            absolute -top-2 -right-2
+            bg-destructive text-destructive-foreground
+            rounded-full p-1.5 shadow-lg
+            opacity-0 group-hover:opacity-100
+            ${selected ? 'opacity-100' : ''}
+            transition-opacity duration-200
+            hover:bg-destructive/90
+            z-10
+          `}
+          title="Delete node"
+          aria-label="Delete node"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+
         <div className="node-header">
           <Icon className={`node-icon ${config.colorClass}`} />
           <span className="node-title">{data.label}</span>
