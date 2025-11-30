@@ -1,12 +1,66 @@
 import { useState } from 'react';
 import { Node } from 'reactflow';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2, X, HelpCircle } from 'lucide-react';
 import { K8sNodeData, KeyValue } from '@/types/k8s';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { getFieldHelp } from '@/utils/fieldHelp';
 
 interface PropertiesPanelProps {
   node: Node<K8sNodeData> | null;
   onUpdate: (nodeId: string, data: Partial<K8sNodeData>) => void;
   onClose: () => void;
+}
+
+function FieldLabel({ label, helpKey }: { label: string; helpKey: string }) {
+  const help = getFieldHelp(helpKey);
+
+  if (!help) {
+    return <label className="label-text">{label}</label>;
+  }
+
+  return (
+    <div className="flex items-center justify-between mb-1">
+      <label className="label-text">{label}</label>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              onClick={(e) => e.preventDefault()}
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="max-w-xs">
+            <div className="space-y-2 text-xs">
+              <p className="font-medium text-foreground">{help.description}</p>
+              {help.example && (
+                <div>
+                  <p className="text-muted-foreground font-semibold mb-1">Examples:</p>
+                  <p className="text-muted-foreground font-mono whitespace-pre-line">{help.example}</p>
+                </div>
+              )}
+              {help.validationRules && (
+                <div>
+                  <p className="text-muted-foreground font-semibold mb-1">Rules:</p>
+                  <p className="text-muted-foreground">{help.validationRules}</p>
+                </div>
+              )}
+              {help.learnMore && (
+                <p className="text-blue-400 italic">{help.learnMore}</p>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
 }
 
 function KeyValueEditor({ 
@@ -96,16 +150,17 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
         {data.type === 'ingress' && (
           <>
             <div>
-              <label className="label-text">Host</label>
+              <FieldLabel label="Host" helpKey="ingress.host" />
               <input
                 type="text"
                 className="input-field"
                 value={data.host}
                 onChange={(e) => update({ host: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="api.example.com"
               />
             </div>
             <div>
-              <label className="label-text">Ingress Class</label>
+              <FieldLabel label="Ingress Class" helpKey="ingress.ingressClassName" />
               <select
                 className="input-field"
                 value={data.ingressClassName}
@@ -128,17 +183,18 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
             </div>
             {data.enableTLS && (
               <div>
-                <label className="label-text">TLS Secret Name</label>
+                <FieldLabel label="TLS Secret Name" helpKey="ingress.tlsSecretName" />
                 <input
                   type="text"
                   className="input-field"
                   value={data.tlsSecretName}
                   onChange={(e) => update({ tlsSecretName: e.target.value } as Partial<K8sNodeData>)}
+                  placeholder="tls-secret"
                 />
               </div>
             )}
             <div>
-              <label className="label-text">Annotations</label>
+              <FieldLabel label="Annotations" helpKey="ingress.annotations" />
               <KeyValueEditor
                 items={data.annotations}
                 onChange={(annotations) => update({ annotations } as Partial<K8sNodeData>)}
@@ -151,36 +207,39 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
         {data.type === 'service' && (
           <>
             <div>
-              <label className="label-text">Service Name</label>
+              <FieldLabel label="Service Name" helpKey="service.serviceName" />
               <input
                 type="text"
                 className="input-field"
                 value={data.serviceName}
                 onChange={(e) => update({ serviceName: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="api-service"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="label-text">Port</label>
+                <FieldLabel label="Port" helpKey="service.port" />
                 <input
                   type="number"
                   className="input-field"
                   value={data.port}
                   onChange={(e) => update({ port: parseInt(e.target.value) || 80 } as Partial<K8sNodeData>)}
+                  placeholder="80"
                 />
               </div>
               <div>
-                <label className="label-text">Target Port</label>
+                <FieldLabel label="Target Port" helpKey="service.targetPort" />
                 <input
                   type="number"
                   className="input-field"
                   value={data.targetPort}
                   onChange={(e) => update({ targetPort: parseInt(e.target.value) || 80 } as Partial<K8sNodeData>)}
+                  placeholder="8080"
                 />
               </div>
             </div>
             <div>
-              <label className="label-text">Service Type</label>
+              <FieldLabel label="Service Type" helpKey="service.serviceType" />
               <select
                 className="input-field"
                 value={data.serviceType}
@@ -192,7 +251,7 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
               </select>
             </div>
             <div>
-              <label className="label-text">Selector Labels</label>
+              <FieldLabel label="Selector Labels" helpKey="service.selectorLabels" />
               <KeyValueEditor
                 items={data.selectorLabels}
                 onChange={(selectorLabels) => update({ selectorLabels } as Partial<K8sNodeData>)}
@@ -205,59 +264,64 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
         {data.type === 'deployment' && (
           <>
             <div>
-              <label className="label-text">Deployment Name</label>
+              <FieldLabel label="Deployment Name" helpKey="deployment.deploymentName" />
               <input
                 type="text"
                 className="input-field"
                 value={data.deploymentName}
                 onChange={(e) => update({ deploymentName: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="backend-deployment"
               />
             </div>
             <div>
-              <label className="label-text">Replicas</label>
+              <FieldLabel label="Replicas" helpKey="deployment.replicas" />
               <input
                 type="number"
                 className="input-field"
                 value={data.replicas}
                 onChange={(e) => update({ replicas: parseInt(e.target.value) || 1 } as Partial<K8sNodeData>)}
+                placeholder="3"
               />
             </div>
             <div>
-              <label className="label-text">Container Name</label>
+              <FieldLabel label="Container Name" helpKey="deployment.containerName" />
               <input
                 type="text"
                 className="input-field"
                 value={data.containerName}
                 onChange={(e) => update({ containerName: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="app"
               />
             </div>
             <div>
-              <label className="label-text">Image</label>
+              <FieldLabel label="Image" helpKey="deployment.image" />
               <input
                 type="text"
                 className="input-field"
                 value={data.image}
                 onChange={(e) => update({ image: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="nginx:alpine"
               />
             </div>
             <div>
-              <label className="label-text">Container Port</label>
+              <FieldLabel label="Container Port" helpKey="deployment.containerPort" />
               <input
                 type="number"
                 className="input-field"
                 value={data.containerPort}
                 onChange={(e) => update({ containerPort: parseInt(e.target.value) || 80 } as Partial<K8sNodeData>)}
+                placeholder="8080"
               />
             </div>
             <div>
-              <label className="label-text">Labels</label>
+              <FieldLabel label="Labels" helpKey="deployment.labels" />
               <KeyValueEditor
                 items={data.labels}
                 onChange={(labels) => update({ labels } as Partial<K8sNodeData>)}
               />
             </div>
             <div>
-              <label className="label-text">Environment Variables</label>
+              <FieldLabel label="Environment Variables" helpKey="deployment.envVars" />
               <KeyValueEditor
                 items={data.envVars}
                 onChange={(envVars) => update({ envVars } as Partial<K8sNodeData>)}
@@ -271,16 +335,17 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
         {data.type === 'configmap' && (
           <>
             <div>
-              <label className="label-text">Name</label>
+              <FieldLabel label="Name" helpKey="configmap.name" />
               <input
                 type="text"
                 className="input-field"
                 value={data.name}
                 onChange={(e) => update({ name: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="app-config"
               />
             </div>
             <div>
-              <label className="label-text">Data</label>
+              <FieldLabel label="Data" helpKey="configmap.data" />
               <KeyValueEditor
                 items={data.data}
                 onChange={(dataItems) => update({ data: dataItems } as Partial<K8sNodeData>)}
@@ -293,16 +358,17 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
         {data.type === 'secret' && (
           <>
             <div>
-              <label className="label-text">Name</label>
+              <FieldLabel label="Name" helpKey="secret.name" />
               <input
                 type="text"
                 className="input-field"
                 value={data.name}
                 onChange={(e) => update({ name: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="db-credentials"
               />
             </div>
             <div>
-              <label className="label-text">Type</label>
+              <FieldLabel label="Type" helpKey="secret.secretType" />
               <select
                 className="input-field"
                 value={data.secretType}
@@ -313,7 +379,7 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
               </select>
             </div>
             <div>
-              <label className="label-text">Data (auto base64 encoded)</label>
+              <FieldLabel label="Data (auto base64 encoded)" helpKey="secret.data" />
               <KeyValueEditor
                 items={data.data}
                 onChange={(dataItems) => update({ data: dataItems } as Partial<K8sNodeData>)}
@@ -326,30 +392,33 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
         {data.type === 'pvc' && (
           <>
             <div>
-              <label className="label-text">Name</label>
+              <FieldLabel label="Name" helpKey="pvc.name" />
               <input
                 type="text"
                 className="input-field"
                 value={data.name}
                 onChange={(e) => update({ name: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="data-pvc"
               />
             </div>
             <div>
-              <label className="label-text">Storage Class</label>
+              <FieldLabel label="Storage Class" helpKey="pvc.storageClassName" />
               <input
                 type="text"
                 className="input-field"
                 value={data.storageClassName}
                 onChange={(e) => update({ storageClassName: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="standard"
               />
             </div>
             <div>
-              <label className="label-text">Size</label>
+              <FieldLabel label="Size" helpKey="pvc.size" />
               <input
                 type="text"
                 className="input-field"
                 value={data.size}
                 onChange={(e) => update({ size: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="10Gi"
               />
             </div>
           </>
@@ -359,31 +428,33 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
         {data.type === 'cronjob' && (
           <>
             <div>
-              <label className="label-text">Name</label>
+              <FieldLabel label="Name" helpKey="cronjob.name" />
               <input
                 type="text"
                 className="input-field"
                 value={data.name}
                 onChange={(e) => update({ name: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="backup-job"
               />
             </div>
             <div>
-              <label className="label-text">Schedule (cron)</label>
+              <FieldLabel label="Schedule (cron)" helpKey="cronjob.schedule" />
               <input
                 type="text"
                 className="input-field"
                 value={data.schedule}
                 onChange={(e) => update({ schedule: e.target.value } as Partial<K8sNodeData>)}
-                placeholder="*/5 * * * *"
+                placeholder="0 2 * * *"
               />
             </div>
             <div>
-              <label className="label-text">Image</label>
+              <FieldLabel label="Image" helpKey="cronjob.image" />
               <input
                 type="text"
                 className="input-field"
                 value={data.image}
                 onChange={(e) => update({ image: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="busybox:latest"
               />
             </div>
           </>
@@ -393,50 +464,55 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
         {data.type === 'hpa' && (
           <>
             <div>
-              <label className="label-text">Name</label>
+              <FieldLabel label="Name" helpKey="hpa.name" />
               <input
                 type="text"
                 className="input-field"
                 value={data.name}
                 onChange={(e) => update({ name: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="backend-hpa"
               />
             </div>
             <div>
-              <label className="label-text">Target Deployment</label>
+              <FieldLabel label="Target Deployment" helpKey="hpa.targetDeployment" />
               <input
                 type="text"
                 className="input-field"
                 value={data.targetDeployment}
                 onChange={(e) => update({ targetDeployment: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="backend-deployment"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="label-text">Min Replicas</label>
+                <FieldLabel label="Min Replicas" helpKey="hpa.minReplicas" />
                 <input
                   type="number"
                   className="input-field"
                   value={data.minReplicas}
                   onChange={(e) => update({ minReplicas: parseInt(e.target.value) || 1 } as Partial<K8sNodeData>)}
+                  placeholder="2"
                 />
               </div>
               <div>
-                <label className="label-text">Max Replicas</label>
+                <FieldLabel label="Max Replicas" helpKey="hpa.maxReplicas" />
                 <input
                   type="number"
                   className="input-field"
                   value={data.maxReplicas}
                   onChange={(e) => update({ maxReplicas: parseInt(e.target.value) || 10 } as Partial<K8sNodeData>)}
+                  placeholder="10"
                 />
               </div>
             </div>
             <div>
-              <label className="label-text">CPU Target (%)</label>
+              <FieldLabel label="CPU Target (%)" helpKey="hpa.cpuTarget" />
               <input
                 type="number"
                 className="input-field"
                 value={data.cpuTarget}
                 onChange={(e) => update({ cpuTarget: parseInt(e.target.value) || 80 } as Partial<K8sNodeData>)}
+                placeholder="80"
               />
             </div>
           </>

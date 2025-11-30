@@ -1,34 +1,36 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
-  Node,
-  Edge,
-  Controls,
   Background,
   BackgroundVariant,
   Connection,
-  addEdge,
-  useNodesState,
-  useEdgesState,
-  ReactFlowInstance,
+  Controls,
+  Node,
   NodeTypes,
+  ReactFlowInstance,
+  addEdge,
+  useEdgesState,
+  useNodesState
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
+import { useToast } from '@/hooks/use-toast';
 import { K8sNodeData, K8sNodeType, defaultNodeData } from '@/types/k8s';
+import { hasExistingConnection, validateConnection } from '@/utils/connectionRules';
+import { clearDiagramState, createAutoSave, loadDiagramState, saveDiagramState } from '@/utils/diagramStorage';
+import { DiagramTemplate, templates } from '@/utils/templates';
 import { generateYamlFromGraph } from '@/utils/yamlGenerator';
-import { templates, DiagramTemplate } from '@/utils/templates';
+import {
+  ChevronDown,
+  Github,
+  LayoutTemplate,
+  Plus,
+  Save,
+  Trash2
+} from 'lucide-react';
 import K8sNode from './k8s/K8sNode';
 import NodePalette from './k8s/NodePalette';
 import PropertiesPanel from './k8s/PropertiesPanel';
 import YamlPanel from './k8s/YamlPanel';
-import { 
-  Plus, 
-  FolderOpen, 
-  Trash2, 
-  LayoutTemplate,
-  Github,
-  ChevronDown
-} from 'lucide-react';
 
 const nodeTypes: NodeTypes = {
   k8sNode: K8sNode,
@@ -44,10 +46,82 @@ export default function DiagramBuilder() {
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node<K8sNodeData> | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const { toast } = useToast();
+
+  // Load saved diagram on mount
+  useEffect(() => {
+    const savedState = loadDiagramState();
+    if (savedState && savedState.nodes.length > 0) {
+      setNodes(savedState.nodes);
+      setEdges(savedState.edges);
+
+      // Update nodeId counter to avoid conflicts
+      const maxId = savedState.nodes.reduce((max, node) => {
+        const id = parseInt(node.id.replace('node_', ''));
+        return isNaN(id) ? max : Math.max(max, id);
+      }, 0);
+      nodeId = maxId + 1;
+
+      toast({
+        title: "Diagram restored",
+        description: "Your previous diagram has been loaded",
+      });
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Auto-save diagram when nodes or edges change
+  useEffect(() => {
+    if (!isLoaded) return; // Don't save during initial load
+
+    const autoSave = createAutoSave((nodes, edges) => {
+      saveDiagramState(nodes, edges);
+      setLastSaved(new Date());
+    });
+
+    autoSave(nodes, edges);
+  }, [nodes, edges, isLoaded]);
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
-    [setEdges]
+    (params: Connection) => {
+      // Find source and target nodes
+      const sourceNode = nodes.find(n => n.id === params.source);
+      const targetNode = nodes.find(n => n.id === params.target);
+
+      // Check if connection already exists
+      if (hasExistingConnection(params.source!, params.target!, edges)) {
+        toast({
+          title: "Connection already exists",
+          description: "This connection already exists between these nodes",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate connection based on K8s rules
+      const validation = validateConnection(sourceNode, targetNode);
+
+      if (!validation.valid) {
+        toast({
+          title: "Invalid connection",
+          description: validation.message || "This connection is not allowed in Kubernetes architecture",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Connection is valid, add it
+      setEdges((eds) => addEdge({ ...params, animated: true }, eds));
+
+      // Show success feedback
+      toast({
+        title: "Connection created",
+        description: `Connected ${(sourceNode?.data as any)?.label} to ${(targetNode?.data as any)?.label}`,
+      });
+    },
+    [nodes, edges, setEdges, toast]
   );
 
   const onDragStart = useCallback((event: React.DragEvent, nodeType: K8sNodeType) => {
@@ -123,7 +197,12 @@ export default function DiagramBuilder() {
     setEdges([]);
     setSelectedNode(null);
     nodeId = 0;
-  }, [setNodes, setEdges]);
+    clearDiagramState();
+    toast({
+      title: "Diagram cleared",
+      description: "Canvas and saved data have been cleared",
+    });
+  }, [setNodes, setEdges, toast]);
 
   const generatedYamls = useMemo(() => {
     return generateYamlFromGraph(nodes, edges);
@@ -134,7 +213,7 @@ export default function DiagramBuilder() {
       {/* Top Navigation */}
       <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-card">
         <div className="flex items-center gap-4">
-          <img src="/logo.png" alt="K8s Diagram Builder Logo" className="h-8" />
+          <img src="/logo.png" alt="K8s Diagram Builder Logo" className="h-36" />
           <div className="h-6 w-px bg-border" />
           <div className="flex items-center gap-2">
             <button onClick={clearDiagram} className="btn-ghost">
@@ -142,8 +221,8 @@ export default function DiagramBuilder() {
               New
             </button>
             <div className="relative">
-              <button 
-                onClick={() => setShowTemplates(!showTemplates)} 
+              <button
+                onClick={() => setShowTemplates(!showTemplates)}
                 className="btn-ghost"
               >
                 <LayoutTemplate className="w-4 h-4" />
@@ -171,10 +250,16 @@ export default function DiagramBuilder() {
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <a 
-            href="https://github.com" 
-            target="_blank" 
+        <div className="flex items-center gap-3">
+          {lastSaved && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Save className="w-3 h-3 text-green-500" />
+              <span>Saved {lastSaved.toLocaleTimeString()}</span>
+            </div>
+          )}
+          <a
+            href="https://github.com"
+            target="_blank"
             rel="noopener noreferrer"
             className="btn-ghost"
           >
