@@ -1,17 +1,24 @@
-export type K8sNodeType = 
-  | 'ingress' 
-  | 'service' 
-  | 'deployment' 
-  | 'configmap' 
-  | 'secret' 
-  | 'pvc' 
-  | 'cronjob' 
+export type K8sNodeType =
+  | 'ingress'
+  | 'service'
+  | 'deployment'
+  | 'configmap'
+  | 'secret'
+  | 'pvc'
+  | 'cronjob'
   | 'hpa'
-  | 'pod';
+  | 'pod'
+  | 'sidecar';
+
+export type CloudProvider = 'none' | 'aws' | 'azure' | 'gcp' | 'custom';
 
 export interface KeyValue {
   key: string;
   value: string;
+}
+
+export interface CloudProviderFieldValues {
+  [key: string]: any;
 }
 
 export interface IngressPath {
@@ -53,6 +60,10 @@ export interface DeploymentNodeData {
   envVars: KeyValue[];
   labels: KeyValue[];
   volumeMounts: string[];
+  cloudProvider?: CloudProvider;
+  cloudProviderTemplateId?: string;
+  cloudProviderFields?: CloudProviderFieldValues;
+  annotations?: KeyValue[];
 }
 
 export interface ConfigMapNodeData {
@@ -68,6 +79,10 @@ export interface SecretNodeData {
   name: string;
   secretType: 'Opaque' | 'kubernetes.io/tls';
   data: KeyValue[];
+  cloudProvider?: CloudProvider;
+  cloudProviderTemplateId?: string;
+  cloudProviderFields?: CloudProviderFieldValues;
+  annotations?: KeyValue[];
 }
 
 export interface PVCNodeData {
@@ -77,6 +92,10 @@ export interface PVCNodeData {
   storageClassName: string;
   size: string;
   accessModes: ('ReadWriteOnce' | 'ReadOnlyMany' | 'ReadWriteMany')[];
+  cloudProvider?: CloudProvider;
+  cloudProviderTemplateId?: string;
+  cloudProviderFields?: CloudProviderFieldValues;
+  annotations?: KeyValue[];
 }
 
 export interface CronJobNodeData {
@@ -107,16 +126,34 @@ export interface PodNodeData {
   containerPort: number;
 }
 
-export type K8sNodeData = 
-  | IngressNodeData 
-  | ServiceNodeData 
-  | DeploymentNodeData 
-  | ConfigMapNodeData 
-  | SecretNodeData 
-  | PVCNodeData 
-  | CronJobNodeData 
+export interface SidecarNodeData {
+  type: 'sidecar';
+  label: string;
+  containerName: string;
+  image: string;
+  containerType: 'sidecar' | 'init';
+  purpose: 'logging' | 'monitoring' | 'proxy' | 'security' | 'custom';
+  containerPort?: number;
+  envVars: KeyValue[];
+  command?: string[];
+  args?: string[];
+  volumeMounts?: string[];
+  cloudProvider?: CloudProvider;
+  cloudProviderTemplateId?: string;
+  cloudProviderFields?: CloudProviderFieldValues;
+}
+
+export type K8sNodeData =
+  | IngressNodeData
+  | ServiceNodeData
+  | DeploymentNodeData
+  | ConfigMapNodeData
+  | SecretNodeData
+  | PVCNodeData
+  | CronJobNodeData
   | HPANodeData
-  | PodNodeData;
+  | PodNodeData
+  | SidecarNodeData;
 
 export interface GeneratedYaml {
   ingresses: string[];
@@ -127,6 +164,7 @@ export interface GeneratedYaml {
   pvcs: string[];
   cronjobs: string[];
   hpas: string[];
+  pods: string[];
 }
 
 export const defaultNodeData: Record<K8sNodeType, () => K8sNodeData> = {
@@ -160,6 +198,10 @@ export const defaultNodeData: Record<K8sNodeType, () => K8sNodeData> = {
     envVars: [],
     labels: [{ key: 'app', value: 'my-app' }],
     volumeMounts: [],
+    cloudProvider: 'none',
+    cloudProviderTemplateId: undefined,
+    cloudProviderFields: {},
+    annotations: [],
   }),
   configmap: () => ({
     type: 'configmap',
@@ -173,6 +215,10 @@ export const defaultNodeData: Record<K8sNodeType, () => K8sNodeData> = {
     name: 'my-secret',
     secretType: 'Opaque',
     data: [{ key: 'SECRET_KEY', value: 'secret-value' }],
+    cloudProvider: 'none',
+    cloudProviderTemplateId: undefined,
+    cloudProviderFields: {},
+    annotations: [],
   }),
   pvc: () => ({
     type: 'pvc',
@@ -181,6 +227,10 @@ export const defaultNodeData: Record<K8sNodeType, () => K8sNodeData> = {
     storageClassName: 'standard',
     size: '1Gi',
     accessModes: ['ReadWriteOnce'],
+    cloudProvider: 'none',
+    cloudProviderTemplateId: undefined,
+    cloudProviderFields: {},
+    annotations: [],
   }),
   cronjob: () => ({
     type: 'cronjob',
@@ -206,5 +256,21 @@ export const defaultNodeData: Record<K8sNodeType, () => K8sNodeData> = {
     name: 'my-pod',
     image: 'nginx:latest',
     containerPort: 80,
+  }),
+  sidecar: () => ({
+    type: 'sidecar',
+    label: 'Sidecar',
+    containerName: 'sidecar',
+    image: 'envoyproxy/envoy:v1.28-latest',
+    containerType: 'sidecar',
+    purpose: 'proxy',
+    containerPort: 8080,
+    envVars: [],
+    command: [],
+    args: [],
+    volumeMounts: [],
+    cloudProvider: 'none',
+    cloudProviderTemplateId: undefined,
+    cloudProviderFields: {},
   }),
 };

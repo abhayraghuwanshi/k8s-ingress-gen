@@ -1,21 +1,27 @@
 import { useState, useMemo, useCallback } from 'react';
-import Editor from '@monaco-editor/react';
+import Editor, { loader } from '@monaco-editor/react';
 import { Copy, Download, Check, Package } from 'lucide-react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { GeneratedYaml } from '@/types/k8s';
+import * as monaco from 'monaco-editor';
+
+// Configure Monaco Editor to use self-hosted version instead of CDN
+// This prevents tracking protection issues in browsers
+loader.config({ monaco });
 
 interface YamlPanelProps {
   yamls: GeneratedYaml;
 }
 
-type YamlTab = 'all' | 'ingresses' | 'services' | 'deployments' | 'configmaps' | 'secrets' | 'pvcs' | 'cronjobs' | 'hpas';
+type YamlTab = 'all' | 'ingresses' | 'services' | 'deployments' | 'configmaps' | 'secrets' | 'pvcs' | 'cronjobs' | 'hpas' | 'pods';
 
 const tabs: { id: YamlTab; label: string; filePrefix: string }[] = [
   { id: 'all', label: 'All', filePrefix: 'all' },
   { id: 'ingresses', label: 'Ingress', filePrefix: 'ingress' },
   { id: 'services', label: 'Service', filePrefix: 'service' },
   { id: 'deployments', label: 'Deploy', filePrefix: 'deployment' },
+  { id: 'pods', label: 'Pods', filePrefix: 'pod' },
   { id: 'configmaps', label: 'Config', filePrefix: 'configmap' },
   { id: 'secrets', label: 'Secret', filePrefix: 'secret' },
   { id: 'pvcs', label: 'PVC', filePrefix: 'pvc' },
@@ -33,6 +39,7 @@ export default function YamlPanel({ yamls }: YamlPanelProps) {
         ...yamls.configmaps,
         ...yamls.secrets,
         ...yamls.pvcs,
+        ...yamls.pods,
         ...yamls.deployments,
         ...yamls.services,
         ...yamls.ingresses,
@@ -60,7 +67,7 @@ export default function YamlPanel({ yamls }: YamlPanelProps) {
 
   const handleDownloadZip = useCallback(async () => {
     const zip = new JSZip();
-    
+
     if (yamls.ingresses.length > 0) {
       yamls.ingresses.forEach((y, i) => zip.file(`ingress-${i + 1}.yaml`, y));
     }
@@ -69,6 +76,9 @@ export default function YamlPanel({ yamls }: YamlPanelProps) {
     }
     if (yamls.deployments.length > 0) {
       yamls.deployments.forEach((y, i) => zip.file(`deployment-${i + 1}.yaml`, y));
+    }
+    if (yamls.pods.length > 0) {
+      yamls.pods.forEach((y, i) => zip.file(`pod-${i + 1}.yaml`, y));
     }
     if (yamls.configmaps.length > 0) {
       yamls.configmaps.forEach((y, i) => zip.file(`configmap-${i + 1}.yaml`, y));

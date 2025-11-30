@@ -46,9 +46,27 @@
     --node-cronjob: 24 95% 53%;
     --node-hpa: 187 92% 55%;
     --node-pod: 47 96% 53%;
+    --node-sidecar: 280 70% 60%;
 
     --font-mono: 'JetBrains Mono', monospace;
     --font-sans: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer base {
+  /* Improve touch targets for mobile */
+  @media (max-width: 768px) {
+    .btn-ghost,
+    .btn-primary,
+    .btn-secondary {
+      @apply min-h-[44px] min-w-[44px];
+    }
+
+    .input-field,
+    select,
+    button {
+      @apply text-base; /* Prevents zoom on iOS */
+    }
   }
 }
 
@@ -170,6 +188,14 @@
   background: hsl(var(--primary)) !important;
 }
 
+/* Larger touch targets on mobile */
+@media (max-width: 768px) {
+  .react-flow__handle {
+    width: 16px !important;
+    height: 16px !important;
+  }
+}
+
 .react-flow__background {
   background-color: hsl(var(--background)) !important;
 }
@@ -196,6 +222,14 @@
 .react-flow__controls-button:hover {
   background: hsl(var(--secondary)) !important;
   fill: hsl(var(--foreground)) !important;
+}
+
+/* Mobile-friendly controls */
+@media (max-width: 768px) {
+  .react-flow__controls-button {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
 }
 
 @layer utilities {

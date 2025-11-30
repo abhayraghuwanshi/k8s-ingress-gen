@@ -1,5 +1,5 @@
 import { K8sNodeType } from '@/types/k8s';
-import { Node, Edge } from 'reactflow';
+import { Edge, Node } from 'reactflow';
 
 /**
  * Kubernetes Connection Rules Matrix
@@ -23,9 +23,11 @@ export interface ConnectionRule {
  * - Deployment → ConfigMap (Deployment can mount ConfigMaps)
  * - Deployment → Secret (Deployment can mount Secrets)
  * - Deployment → PVC (Deployment can mount Persistent Volume Claims)
+ * - Deployment → Sidecar (Deployment can include sidecar/init containers)
  * - Pod → ConfigMap (Pod can mount ConfigMaps)
  * - Pod → Secret (Pod can mount Secrets)
  * - Pod → PVC (Pod can mount Persistent Volume Claims)
+ * - Pod → Sidecar (Pod can include sidecar/init containers)
  * - HPA → Deployment (HPA scales Deployments)
  * - CronJob → ConfigMap (CronJob can use ConfigMaps)
  * - CronJob → Secret (CronJob can use Secrets)
@@ -34,7 +36,7 @@ export interface ConnectionRule {
  * - Ingress → Deployment (Ingress doesn't route directly to Deployments)
  * - Ingress → Pod (Ingress doesn't route directly to Pods)
  * - Service → ConfigMap/Secret/PVC (Services don't mount volumes)
- * - ConfigMap/Secret/PVC → anything (These are passive resources)
+ * - ConfigMap/Secret/PVC/Sidecar → anything (These are passive resources)
  * - HPA → Service/Ingress (HPA only scales Deployments/StatefulSets)
  */
 
@@ -65,6 +67,7 @@ const connectionRules: ConnectionRule[] = [
   { from: 'deployment', to: 'configmap', allowed: true },
   { from: 'deployment', to: 'secret', allowed: true },
   { from: 'deployment', to: 'pvc', allowed: true },
+  { from: 'deployment', to: 'sidecar', allowed: true },
   { from: 'deployment', to: 'ingress', allowed: false, reason: 'Deployments are selected by Services, not Ingress' },
   { from: 'deployment', to: 'service', allowed: false, reason: 'Deployments are selected by Services, not the reverse' },
   { from: 'deployment', to: 'deployment', allowed: false, reason: 'Deployments cannot connect to other Deployments' },
@@ -76,6 +79,7 @@ const connectionRules: ConnectionRule[] = [
   { from: 'pod', to: 'configmap', allowed: true },
   { from: 'pod', to: 'secret', allowed: true },
   { from: 'pod', to: 'pvc', allowed: true },
+  { from: 'pod', to: 'sidecar', allowed: true },
   { from: 'pod', to: 'ingress', allowed: false, reason: 'Pods are selected by Services, not Ingress' },
   { from: 'pod', to: 'service', allowed: false, reason: 'Pods are selected by Services, not the reverse' },
   { from: 'pod', to: 'deployment', allowed: false, reason: 'Standalone Pods cannot connect to Deployments' },
@@ -137,6 +141,27 @@ const connectionRules: ConnectionRule[] = [
   { from: 'hpa', to: 'pvc', allowed: false, reason: 'HPA cannot scale PVCs' },
   { from: 'hpa', to: 'cronjob', allowed: false, reason: 'HPA cannot scale CronJobs' },
   { from: 'hpa', to: 'hpa', allowed: false, reason: 'HPA cannot connect to another HPA' },
+  { from: 'hpa', to: 'sidecar', allowed: false, reason: 'HPA cannot scale Sidecars' },
+
+  // Sidecar connections (passive resource - injected into Deployment pods)
+  { from: 'sidecar', to: 'ingress', allowed: false, reason: 'Sidecars are passive containers injected into pods' },
+  { from: 'sidecar', to: 'service', allowed: false, reason: 'Sidecars are passive containers injected into pods' },
+  { from: 'sidecar', to: 'deployment', allowed: true, reason: 'Sidecars are passive containers injected into pods' },
+  { from: 'sidecar', to: 'pod', allowed: false, reason: 'Sidecars are passive containers injected into pods' },
+  { from: 'sidecar', to: 'configmap', allowed: false, reason: 'Sidecars are passive containers injected into pods' },
+  { from: 'sidecar', to: 'secret', allowed: false, reason: 'Sidecars are passive containers injected into pods' },
+  { from: 'sidecar', to: 'pvc', allowed: false, reason: 'Sidecars are passive containers injected into pods' },
+  { from: 'sidecar', to: 'cronjob', allowed: false, reason: 'Sidecars are passive containers injected into pods' },
+  { from: 'sidecar', to: 'hpa', allowed: false, reason: 'Sidecars are passive containers injected into pods' },
+  { from: 'sidecar', to: 'sidecar', allowed: false, reason: 'Sidecars cannot connect to other sidecars' },
+
+  // Update other resources to disallow connections TO sidecar (except Deployment and Pod)
+  { from: 'ingress', to: 'sidecar', allowed: false, reason: 'Sidecars are attached to Deployments and Pods only' },
+  { from: 'service', to: 'sidecar', allowed: false, reason: 'Sidecars are attached to Deployments and Pods only' },
+  { from: 'configmap', to: 'sidecar', allowed: false, reason: 'Sidecars are attached to Deployments and Pods only' },
+  { from: 'secret', to: 'sidecar', allowed: false, reason: 'Sidecars are attached to Deployments and Pods only' },
+  { from: 'pvc', to: 'sidecar', allowed: false, reason: 'Sidecars are attached to Deployments and Pods only' },
+  { from: 'cronjob', to: 'sidecar', allowed: false, reason: 'Sidecars are attached to Deployments and Pods only' },
 ];
 
 /**

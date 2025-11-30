@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Node } from 'reactflow';
 import { Plus, Trash2, X, HelpCircle } from 'lucide-react';
-import { K8sNodeData, KeyValue } from '@/types/k8s';
+import { K8sNodeData, KeyValue, CloudProvider, DeploymentNodeData, PVCNodeData } from '@/types/k8s';
 import {
   Tooltip,
   TooltipContent,
@@ -9,6 +9,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { getFieldHelp } from '@/utils/fieldHelp';
+import {
+  getTemplatesByProvider,
+  CloudProviderTemplate,
+  CloudProviderField,
+  CloudProviderFieldValues,
+} from '@/utils/cloudProviderTemplates';
 
 interface PropertiesPanelProps {
   node: Node<K8sNodeData> | null;
@@ -63,13 +69,13 @@ function FieldLabel({ label, helpKey }: { label: string; helpKey: string }) {
   );
 }
 
-function KeyValueEditor({ 
-  items, 
-  onChange, 
+function KeyValueEditor({
+  items,
+  onChange,
   keyLabel = 'Key',
   valueLabel = 'Value'
-}: { 
-  items: KeyValue[]; 
+}: {
+  items: KeyValue[];
   onChange: (items: KeyValue[]) => void;
   keyLabel?: string;
   valueLabel?: string;
@@ -108,6 +114,216 @@ function KeyValueEditor({
       <button onClick={addItem} className="btn-secondary w-full">
         <Plus className="w-4 h-4" /> Add
       </button>
+    </div>
+  );
+}
+
+function DynamicFieldRenderer({
+  field,
+  value,
+  onChange,
+}: {
+  field: CloudProviderField;
+  value: any;
+  onChange: (value: any) => void;
+}) {
+  const renderField = () => {
+    switch (field.type) {
+      case 'text':
+      case 'textarea':
+        return (
+          <input
+            type="text"
+            className="input-field"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+          />
+        );
+      case 'number':
+        return (
+          <input
+            type="number"
+            className="input-field"
+            value={value || ''}
+            onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+            placeholder={field.placeholder}
+          />
+        );
+      case 'select':
+        return (
+          <select
+            className="input-field"
+            value={value || field.defaultValue || ''}
+            onChange={(e) => onChange(e.target.value)}
+          >
+            {field.options?.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        );
+      case 'checkbox':
+        return (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={value || false}
+              onChange={(e) => onChange(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="text-sm text-muted-foreground">{field.description}</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="label-text">{field.label}</label>
+        {field.helpText && (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-xs">
+                <div className="space-y-2 text-xs">
+                  <p className="font-medium text-foreground">{field.description}</p>
+                  {field.helpText && (
+                    <p className="text-muted-foreground">{field.helpText}</p>
+                  )}
+                  {field.validationRules && (
+                    <div>
+                      <p className="text-muted-foreground font-semibold mb-1">Rules:</p>
+                      <p className="text-muted-foreground">{field.validationRules}</p>
+                    </div>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
+      {renderField()}
+    </div>
+  );
+}
+
+function CloudProviderFieldsSection({
+  resourceType,
+  cloudProvider,
+  templateId,
+  fieldValues,
+  onProviderChange,
+  onTemplateChange,
+  onFieldValuesChange,
+}: {
+  resourceType: 'deployment' | 'pvc' | 'secret';
+  cloudProvider: CloudProvider;
+  templateId?: string;
+  fieldValues: CloudProviderFieldValues;
+  onProviderChange: (provider: CloudProvider) => void;
+  onTemplateChange: (templateId: string | undefined) => void;
+  onFieldValuesChange: (values: CloudProviderFieldValues) => void;
+}) {
+  const [selectedTemplate, setSelectedTemplate] = useState<CloudProviderTemplate | null>(null);
+
+  const handleProviderChange = (provider: CloudProvider) => {
+    onProviderChange(provider);
+    onTemplateChange(undefined);
+    onFieldValuesChange({});
+    setSelectedTemplate(null);
+  };
+
+  const handleTemplateChange = (newTemplateId: string) => {
+    const templates = getTemplatesByProvider(cloudProvider, resourceType);
+    const template = templates.find((t) => t.id === newTemplateId);
+    setSelectedTemplate(template || null);
+    onTemplateChange(newTemplateId);
+
+    // Initialize field values with defaults
+    const defaultValues: CloudProviderFieldValues = {};
+    template?.fields.forEach((field) => {
+      if (field.defaultValue !== undefined) {
+        defaultValues[field.key] = field.defaultValue;
+      }
+    });
+    onFieldValuesChange({ ...defaultValues, ...fieldValues });
+  };
+
+  const handleFieldChange = (fieldKey: string, value: any) => {
+    onFieldValuesChange({
+      ...fieldValues,
+      [fieldKey]: value,
+    });
+  };
+
+  const templates = getTemplatesByProvider(cloudProvider, resourceType);
+
+  return (
+    <div className="space-y-4 border-t border-border pt-4">
+      <div className="bg-primary/5 p-3 rounded-md">
+        <h3 className="text-sm font-semibold mb-2">Cloud Provider Configuration</h3>
+
+        <div>
+          <label className="label-text">Cloud Provider</label>
+          <select
+            className="input-field"
+            value={cloudProvider}
+            onChange={(e) => handleProviderChange(e.target.value as CloudProvider)}
+          >
+            <option value="none">None</option>
+            <option value="aws">AWS (EKS)</option>
+            <option value="azure">Azure (AKS)</option>
+            <option value="gcp">GCP (GKE)</option>
+          </select>
+        </div>
+
+        {cloudProvider !== 'none' && templates.length > 0 && (
+          <div className="mt-3">
+            <label className="label-text">Template</label>
+            <select
+              className="input-field"
+              value={templateId || ''}
+              onChange={(e) => handleTemplateChange(e.target.value)}
+            >
+              <option value="">Select a template</option>
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {selectedTemplate && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-primary">
+            {selectedTemplate.name} Fields
+          </h4>
+          {selectedTemplate.fields.map((field) => (
+            <DynamicFieldRenderer
+              key={field.key}
+              field={field}
+              value={fieldValues[field.key]}
+              onChange={(value) => handleFieldChange(field.key, value)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -328,6 +544,22 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
                 keyLabel="Name"
               />
             </div>
+
+            <CloudProviderFieldsSection
+              resourceType="deployment"
+              cloudProvider={data.cloudProvider || 'none'}
+              templateId={data.cloudProviderTemplateId}
+              fieldValues={data.cloudProviderFields || {}}
+              onProviderChange={(cloudProvider) =>
+                update({ cloudProvider } as Partial<K8sNodeData>)
+              }
+              onTemplateChange={(cloudProviderTemplateId) =>
+                update({ cloudProviderTemplateId } as Partial<K8sNodeData>)
+              }
+              onFieldValuesChange={(cloudProviderFields) =>
+                update({ cloudProviderFields } as Partial<K8sNodeData>)
+              }
+            />
           </>
         )}
 
@@ -385,6 +617,22 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
                 onChange={(dataItems) => update({ data: dataItems } as Partial<K8sNodeData>)}
               />
             </div>
+
+            <CloudProviderFieldsSection
+              resourceType="secret"
+              cloudProvider={data.cloudProvider || 'none'}
+              templateId={data.cloudProviderTemplateId}
+              fieldValues={data.cloudProviderFields || {}}
+              onProviderChange={(cloudProvider) =>
+                update({ cloudProvider } as Partial<K8sNodeData>)
+              }
+              onTemplateChange={(cloudProviderTemplateId) =>
+                update({ cloudProviderTemplateId } as Partial<K8sNodeData>)
+              }
+              onFieldValuesChange={(cloudProviderFields) =>
+                update({ cloudProviderFields } as Partial<K8sNodeData>)
+              }
+            />
           </>
         )}
 
@@ -421,6 +669,22 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
                 placeholder="10Gi"
               />
             </div>
+
+            <CloudProviderFieldsSection
+              resourceType="pvc"
+              cloudProvider={data.cloudProvider || 'none'}
+              templateId={data.cloudProviderTemplateId}
+              fieldValues={data.cloudProviderFields || {}}
+              onProviderChange={(cloudProvider) =>
+                update({ cloudProvider } as Partial<K8sNodeData>)
+              }
+              onTemplateChange={(cloudProviderTemplateId) =>
+                update({ cloudProviderTemplateId } as Partial<K8sNodeData>)
+              }
+              onFieldValuesChange={(cloudProviderFields) =>
+                update({ cloudProviderFields } as Partial<K8sNodeData>)
+              }
+            />
           </>
         )}
 
@@ -515,6 +779,91 @@ export default function PropertiesPanel({ node, onUpdate, onClose }: PropertiesP
                 placeholder="80"
               />
             </div>
+          </>
+        )}
+
+        {/* Sidecar fields */}
+        {data.type === 'sidecar' && (
+          <>
+            <div>
+              <FieldLabel label="Container Name" helpKey="sidecar.containerName" />
+              <input
+                type="text"
+                className="input-field"
+                value={data.containerName}
+                onChange={(e) => update({ containerName: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="sidecar"
+              />
+            </div>
+            <div>
+              <FieldLabel label="Image" helpKey="sidecar.image" />
+              <input
+                type="text"
+                className="input-field"
+                value={data.image}
+                onChange={(e) => update({ image: e.target.value } as Partial<K8sNodeData>)}
+                placeholder="envoyproxy/envoy:v1.28-latest"
+              />
+            </div>
+            <div>
+              <FieldLabel label="Purpose" helpKey="sidecar.purpose" />
+              <select
+                className="input-field"
+                value={data.purpose}
+                onChange={(e) => update({ purpose: e.target.value as 'logging' | 'monitoring' | 'proxy' | 'security' | 'custom' } as Partial<K8sNodeData>)}
+              >
+                <option value="logging">Logging</option>
+                <option value="monitoring">Monitoring</option>
+                <option value="proxy">Proxy / Service Mesh</option>
+                <option value="security">Security</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            <div>
+              <FieldLabel label="Container Type" helpKey="sidecar.containerType" />
+              <select
+                className="input-field"
+                value={data.containerType}
+                onChange={(e) => update({ containerType: e.target.value as 'sidecar' | 'init' } as Partial<K8sNodeData>)}
+              >
+                <option value="sidecar">Sidecar Container</option>
+                <option value="init">Init Container</option>
+              </select>
+            </div>
+            <div>
+              <FieldLabel label="Container Port (optional)" helpKey="sidecar.containerPort" />
+              <input
+                type="number"
+                className="input-field"
+                value={data.containerPort || ''}
+                onChange={(e) => update({ containerPort: parseInt(e.target.value) || undefined } as Partial<K8sNodeData>)}
+                placeholder="8080"
+              />
+            </div>
+            <div>
+              <FieldLabel label="Environment Variables" helpKey="sidecar.envVars" />
+              <KeyValueEditor
+                items={data.envVars}
+                onChange={(envVars) => update({ envVars } as Partial<K8sNodeData>)}
+                keyLabel="Name"
+              />
+            </div>
+
+            <CloudProviderFieldsSection
+              resourceType="sidecar"
+              cloudProvider={data.cloudProvider || 'none'}
+              templateId={data.cloudProviderTemplateId}
+              fieldValues={data.cloudProviderFields || {}}
+              onProviderChange={(cloudProvider) =>
+                update({ cloudProvider } as Partial<K8sNodeData>)
+              }
+              onTemplateChange={(cloudProviderTemplateId) =>
+                update({ cloudProviderTemplateId } as Partial<K8sNodeData>)
+              }
+              onFieldValuesChange={(cloudProviderFields) =>
+                update({ cloudProviderFields } as Partial<K8sNodeData>)
+              }
+            />
           </>
         )}
       </div>

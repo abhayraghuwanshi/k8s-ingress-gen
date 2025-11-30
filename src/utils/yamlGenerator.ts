@@ -1,16 +1,23 @@
 import { Node, Edge } from 'reactflow';
-import { 
-  K8sNodeData, 
-  IngressNodeData, 
-  ServiceNodeData, 
+import {
+  K8sNodeData,
+  IngressNodeData,
+  ServiceNodeData,
   DeploymentNodeData,
   ConfigMapNodeData,
   SecretNodeData,
   PVCNodeData,
   CronJobNodeData,
   HPANodeData,
-  GeneratedYaml 
+  PodNodeData,
+  SidecarNodeData,
+  GeneratedYaml
 } from '@/types/k8s';
+import {
+  getCloudProviderTemplate,
+  generateAnnotationsFromTemplate,
+  generateLabelsFromTemplate,
+} from './cloudProviderTemplates';
 
 function getConnectedNodes(nodeId: string, edges: Edge[], nodes: Node<K8sNodeData>[], direction: 'source' | 'target'): Node<K8sNodeData>[] {
   const connectedEdges = edges.filter(e => direction === 'source' ? e.source === nodeId : e.target === nodeId);
@@ -97,16 +104,33 @@ spec:
 }
 
 function generateDeploymentYaml(
-  data: DeploymentNodeData, 
+  data: DeploymentNodeData,
   connectedConfigMaps: ConfigMapNodeData[],
   connectedSecrets: SecretNodeData[],
-  connectedPVCs: PVCNodeData[]
+  connectedPVCs: PVCNodeData[],
+  connectedSidecars: SidecarNodeData[] = []
 ): string {
   let yaml = `apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ${data.deploymentName}
-  labels:`;
+  name: ${data.deploymentName}`;
+
+  // Add cloud provider annotations if template is selected
+  const cloudAnnotations = data.cloudProviderTemplateId && data.cloudProviderFields
+    ? (() => {
+        const template = getCloudProviderTemplate(data.cloudProviderTemplateId);
+        return template ? generateAnnotationsFromTemplate(template, data.cloudProviderFields) : [];
+      })()
+    : data.annotations || [];
+
+  if (cloudAnnotations.length > 0) {
+    yaml += `\n  annotations:`;
+    cloudAnnotations.forEach(a => {
+      yaml += `\n    ${a.key}: "${a.value}"`;
+    });
+  }
+
+  yaml += `\n  labels:`;
 
   data.labels.forEach(l => {
     yaml += `\n    ${l.key}: ${l.value}`;
@@ -132,12 +156,89 @@ spec:
   });
 
   yaml += `
-    spec:
+    spec:`;
+
+  // Add init containers (sidecars with containerType: 'init')
+  const initContainers = connectedSidecars.filter(s => s.containerType === 'init');
+  if (initContainers.length > 0) {
+    yaml += `
+      initContainers:`;
+    initContainers.forEach(sidecar => {
+      yaml += `
+        - name: ${sidecar.containerName}
+          image: ${sidecar.image}`;
+
+      if (sidecar.command && sidecar.command.length > 0) {
+        yaml += `
+          command:`;
+        sidecar.command.forEach(cmd => {
+          yaml += `
+            - "${cmd}"`;
+        });
+      }
+
+      if (sidecar.args && sidecar.args.length > 0) {
+        yaml += `
+          args:`;
+        sidecar.args.forEach(arg => {
+          yaml += `
+            - "${arg}"`;
+        });
+      }
+
+      if (sidecar.envVars.length > 0) {
+        yaml += `
+          env:`;
+        sidecar.envVars.forEach(e => {
+          yaml += `
+            - name: ${e.key}
+              value: "${e.value}"`;
+        });
+      }
+
+      if (sidecar.volumeMounts && sidecar.volumeMounts.length > 0) {
+        yaml += `
+          volumeMounts:`;
+        sidecar.volumeMounts.forEach(mount => {
+          yaml += `
+            - name: ${mount}
+              mountPath: /mnt/${mount}`;
+        });
+      }
+    });
+  }
+
+  yaml += `
       containers:
         - name: ${data.containerName}
           image: ${data.image}
           ports:
             - containerPort: ${data.containerPort}`;
+
+  // Add resource requests and limits from cloud provider fields
+  if (data.cloudProviderFields) {
+    const { cpuRequest, memoryRequest, cpuLimit, memoryLimit } = data.cloudProviderFields;
+    if (cpuRequest || memoryRequest || cpuLimit || memoryLimit) {
+      yaml += `
+          resources:`;
+      if (cpuRequest || memoryRequest) {
+        yaml += `
+            requests:`;
+        if (cpuRequest) yaml += `
+              cpu: ${cpuRequest}`;
+        if (memoryRequest) yaml += `
+              memory: ${memoryRequest}`;
+      }
+      if (cpuLimit || memoryLimit) {
+        yaml += `
+            limits:`;
+        if (cpuLimit) yaml += `
+              cpu: ${cpuLimit}`;
+        if (memoryLimit) yaml += `
+              memory: ${memoryLimit}`;
+      }
+    }
+  }
 
   // Add env vars
   const allEnvVars = [...data.envVars];
@@ -178,7 +279,64 @@ spec:
             - name: ${pvc.name}-volume
               mountPath: /data/${pvc.name}`;
     });
+  }
 
+  // Add regular sidecar containers (not init containers)
+  const regularSidecars = connectedSidecars.filter(s => s.containerType === 'sidecar');
+  if (regularSidecars.length > 0) {
+    regularSidecars.forEach(sidecar => {
+      yaml += `
+        - name: ${sidecar.containerName}
+          image: ${sidecar.image}`;
+
+      if (sidecar.containerPort) {
+        yaml += `
+          ports:
+            - containerPort: ${sidecar.containerPort}`;
+      }
+
+      if (sidecar.command && sidecar.command.length > 0) {
+        yaml += `
+          command:`;
+        sidecar.command.forEach(cmd => {
+          yaml += `
+            - "${cmd}"`;
+        });
+      }
+
+      if (sidecar.args && sidecar.args.length > 0) {
+        yaml += `
+          args:`;
+        sidecar.args.forEach(arg => {
+          yaml += `
+            - "${arg}"`;
+        });
+      }
+
+      if (sidecar.envVars.length > 0) {
+        yaml += `
+          env:`;
+        sidecar.envVars.forEach(e => {
+          yaml += `
+            - name: ${e.key}
+              value: "${e.value}"`;
+        });
+      }
+
+      if (sidecar.volumeMounts && sidecar.volumeMounts.length > 0) {
+        yaml += `
+          volumeMounts:`;
+        sidecar.volumeMounts.forEach(mount => {
+          yaml += `
+            - name: ${mount}
+              mountPath: /mnt/${mount}`;
+        });
+      }
+    });
+  }
+
+  // Add volumes
+  if (connectedPVCs.length > 0) {
     yaml += `
       volumes:`;
     connectedPVCs.forEach(pvc => {
@@ -210,7 +368,24 @@ function generateSecretYaml(data: SecretNodeData): string {
   let yaml = `apiVersion: v1
 kind: Secret
 metadata:
-  name: ${data.name}
+  name: ${data.name}`;
+
+  // Add cloud provider annotations if template is selected
+  const cloudAnnotations = data.cloudProviderTemplateId && data.cloudProviderFields
+    ? (() => {
+        const template = getCloudProviderTemplate(data.cloudProviderTemplateId);
+        return template ? generateAnnotationsFromTemplate(template, data.cloudProviderFields) : [];
+      })()
+    : data.annotations || [];
+
+  if (cloudAnnotations.length > 0) {
+    yaml += `\n  annotations:`;
+    cloudAnnotations.forEach(a => {
+      yaml += `\n    ${a.key}: "${a.value}"`;
+    });
+  }
+
+  yaml += `
 type: ${data.secretType}
 data:`;
 
@@ -223,10 +398,27 @@ data:`;
 }
 
 function generatePVCYaml(data: PVCNodeData): string {
-  return `apiVersion: v1
+  let yaml = `apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: ${data.name}
+  name: ${data.name}`;
+
+  // Add cloud provider annotations if template is selected
+  const cloudAnnotations = data.cloudProviderTemplateId && data.cloudProviderFields
+    ? (() => {
+        const template = getCloudProviderTemplate(data.cloudProviderTemplateId);
+        return template ? generateAnnotationsFromTemplate(template, data.cloudProviderFields) : [];
+      })()
+    : data.annotations || [];
+
+  if (cloudAnnotations.length > 0) {
+    yaml += `\n  annotations:`;
+    cloudAnnotations.forEach(a => {
+      yaml += `\n    ${a.key}: "${a.value}"`;
+    });
+  }
+
+  yaml += `
 spec:
   storageClassName: ${data.storageClassName}
   accessModes:
@@ -234,6 +426,8 @@ ${data.accessModes.map(m => `    - ${m}`).join('\n')}
   resources:
     requests:
       storage: ${data.size}`;
+
+  return yaml;
 }
 
 function generateCronJobYaml(data: CronJobNodeData): string {
@@ -276,6 +470,172 @@ spec:
           averageUtilization: ${data.cpuTarget}`;
 }
 
+function generatePodYaml(
+  data: PodNodeData,
+  connectedConfigMaps: ConfigMapNodeData[],
+  connectedSecrets: SecretNodeData[],
+  connectedPVCs: PVCNodeData[],
+  connectedSidecars: SidecarNodeData[] = []
+): string {
+  let yaml = `apiVersion: v1
+kind: Pod
+metadata:
+  name: ${data.name}
+spec:`;
+
+  // Add init containers (sidecars with containerType: 'init')
+  const initContainers = connectedSidecars.filter(s => s.containerType === 'init');
+  if (initContainers.length > 0) {
+    yaml += `
+  initContainers:`;
+    initContainers.forEach(sidecar => {
+      yaml += `
+    - name: ${sidecar.containerName}
+      image: ${sidecar.image}`;
+
+      if (sidecar.command && sidecar.command.length > 0) {
+        yaml += `
+      command:`;
+        sidecar.command.forEach(cmd => {
+          yaml += `
+        - "${cmd}"`;
+        });
+      }
+
+      if (sidecar.args && sidecar.args.length > 0) {
+        yaml += `
+      args:`;
+        sidecar.args.forEach(arg => {
+          yaml += `
+        - "${arg}"`;
+        });
+      }
+
+      if (sidecar.envVars.length > 0) {
+        yaml += `
+      env:`;
+        sidecar.envVars.forEach(e => {
+          yaml += `
+        - name: ${e.key}
+          value: "${e.value}"`;
+        });
+      }
+
+      if (sidecar.volumeMounts && sidecar.volumeMounts.length > 0) {
+        yaml += `
+      volumeMounts:`;
+        sidecar.volumeMounts.forEach(mount => {
+          yaml += `
+        - name: ${mount}
+          mountPath: /mnt/${mount}`;
+        });
+      }
+    });
+  }
+
+  yaml += `
+  containers:
+    - name: ${data.name}
+      image: ${data.image}
+      ports:
+        - containerPort: ${data.containerPort}`;
+
+  // Add ConfigMaps and Secrets as env sources
+  if (connectedConfigMaps.length > 0 || connectedSecrets.length > 0) {
+    yaml += `
+      envFrom:`;
+    connectedConfigMaps.forEach(cm => {
+      yaml += `
+        - configMapRef:
+            name: ${cm.name}`;
+    });
+    connectedSecrets.forEach(s => {
+      yaml += `
+        - secretRef:
+            name: ${s.name}`;
+    });
+  }
+
+  // Add volume mounts
+  if (connectedPVCs.length > 0) {
+    yaml += `
+      volumeMounts:`;
+    connectedPVCs.forEach((pvc) => {
+      yaml += `
+        - name: ${pvc.name}-volume
+          mountPath: /data/${pvc.name}`;
+    });
+  }
+
+  // Add regular sidecar containers (not init containers)
+  const regularSidecars = connectedSidecars.filter(s => s.containerType === 'sidecar');
+  if (regularSidecars.length > 0) {
+    regularSidecars.forEach(sidecar => {
+      yaml += `
+    - name: ${sidecar.containerName}
+      image: ${sidecar.image}`;
+
+      if (sidecar.containerPort) {
+        yaml += `
+      ports:
+        - containerPort: ${sidecar.containerPort}`;
+      }
+
+      if (sidecar.command && sidecar.command.length > 0) {
+        yaml += `
+      command:`;
+        sidecar.command.forEach(cmd => {
+          yaml += `
+        - "${cmd}"`;
+        });
+      }
+
+      if (sidecar.args && sidecar.args.length > 0) {
+        yaml += `
+      args:`;
+        sidecar.args.forEach(arg => {
+          yaml += `
+        - "${arg}"`;
+        });
+      }
+
+      if (sidecar.envVars.length > 0) {
+        yaml += `
+      env:`;
+        sidecar.envVars.forEach(e => {
+          yaml += `
+        - name: ${e.key}
+          value: "${e.value}"`;
+        });
+      }
+
+      if (sidecar.volumeMounts && sidecar.volumeMounts.length > 0) {
+        yaml += `
+      volumeMounts:`;
+        sidecar.volumeMounts.forEach(mount => {
+          yaml += `
+        - name: ${mount}
+          mountPath: /mnt/${mount}`;
+        });
+      }
+    });
+  }
+
+  // Add volumes
+  if (connectedPVCs.length > 0) {
+    yaml += `
+  volumes:`;
+    connectedPVCs.forEach(pvc => {
+      yaml += `
+    - name: ${pvc.name}-volume
+      persistentVolumeClaim:
+        claimName: ${pvc.name}`;
+    });
+  }
+
+  return yaml;
+}
+
 export function generateYamlFromGraph(nodes: Node<K8sNodeData>[], edges: Edge[]): GeneratedYaml {
   const result: GeneratedYaml = {
     ingresses: [],
@@ -286,6 +646,7 @@ export function generateYamlFromGraph(nodes: Node<K8sNodeData>[], edges: Edge[])
     pvcs: [],
     cronjobs: [],
     hpas: [],
+    pods: [],
   };
 
   nodes.forEach(node => {
@@ -316,7 +677,10 @@ export function generateYamlFromGraph(nodes: Node<K8sNodeData>[], edges: Edge[])
         const connectedPVCs = getConnectedNodes(node.id, edges, nodes, 'source')
           .filter(n => n.data.type === 'pvc')
           .map(n => n.data as PVCNodeData);
-        result.deployments.push(generateDeploymentYaml(data, connectedConfigMaps, connectedSecrets, connectedPVCs));
+        const connectedSidecars = getConnectedNodes(node.id, edges, nodes, 'source')
+          .filter(n => n.data.type === 'sidecar')
+          .map(n => n.data as SidecarNodeData);
+        result.deployments.push(generateDeploymentYaml(data, connectedConfigMaps, connectedSecrets, connectedPVCs, connectedSidecars));
         break;
       }
       case 'configmap':
@@ -334,6 +698,22 @@ export function generateYamlFromGraph(nodes: Node<K8sNodeData>[], edges: Edge[])
       case 'hpa':
         result.hpas.push(generateHPAYaml(data));
         break;
+      case 'pod': {
+        const connectedConfigMaps = getConnectedNodes(node.id, edges, nodes, 'source')
+          .filter(n => n.data.type === 'configmap')
+          .map(n => n.data as ConfigMapNodeData);
+        const connectedSecrets = getConnectedNodes(node.id, edges, nodes, 'source')
+          .filter(n => n.data.type === 'secret')
+          .map(n => n.data as SecretNodeData);
+        const connectedPVCs = getConnectedNodes(node.id, edges, nodes, 'source')
+          .filter(n => n.data.type === 'pvc')
+          .map(n => n.data as PVCNodeData);
+        const connectedSidecars = getConnectedNodes(node.id, edges, nodes, 'source')
+          .filter(n => n.data.type === 'sidecar')
+          .map(n => n.data as SidecarNodeData);
+        result.pods.push(generatePodYaml(data, connectedConfigMaps, connectedSecrets, connectedPVCs, connectedSidecars));
+        break;
+      }
     }
   });
 
@@ -345,6 +725,7 @@ export function combineYamls(yamls: GeneratedYaml): string {
     ...yamls.configmaps,
     ...yamls.secrets,
     ...yamls.pvcs,
+    ...yamls.pods,
     ...yamls.deployments,
     ...yamls.services,
     ...yamls.ingresses,

@@ -1,15 +1,17 @@
 import { memo } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
-import { 
-  Globe, 
-  Server, 
-  Box, 
-  FileText, 
-  Key, 
-  HardDrive, 
-  Clock, 
+import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
+import {
+  Globe,
+  Server,
+  Box,
+  FileText,
+  Key,
+  HardDrive,
+  Clock,
   Activity,
-  Container
+  Container,
+  Layers,
+  Trash2
 } from 'lucide-react';
 import { K8sNodeData, K8sNodeType } from '@/types/k8s';
 
@@ -23,6 +25,7 @@ const nodeConfig: Record<K8sNodeType, { icon: React.ElementType; colorClass: str
   cronjob: { icon: Clock, colorClass: 'text-[hsl(var(--node-cronjob))]', bgClass: 'border-[hsl(var(--node-cronjob))]' },
   hpa: { icon: Activity, colorClass: 'text-[hsl(var(--node-hpa))]', bgClass: 'border-[hsl(var(--node-hpa))]' },
   pod: { icon: Container, colorClass: 'text-[hsl(var(--node-pod))]', bgClass: 'border-[hsl(var(--node-pod))]' },
+  sidecar: { icon: Layers, colorClass: 'text-[hsl(var(--node-sidecar))]', bgClass: 'border-[hsl(var(--node-sidecar))]' },
 };
 
 function getNodeSummary(data: K8sNodeData): string[] {
@@ -45,15 +48,23 @@ function getNodeSummary(data: K8sNodeData): string[] {
       return [`${data.minReplicas}-${data.maxReplicas}`, `CPU: ${data.cpuTarget}%`];
     case 'pod':
       return [data.image];
+    case 'sidecar':
+      return [data.image, `Purpose: ${data.purpose}`];
     default:
       return [];
   }
 }
 
-function K8sNode({ data, selected }: NodeProps<K8sNodeData>) {
+function K8sNode({ data, selected, id }: NodeProps<K8sNodeData>) {
+  const { deleteElements } = useReactFlow();
   const config = nodeConfig[data.type];
   const Icon = config.icon;
   const summary = getNodeSummary(data);
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteElements({ nodes: [{ id }] });
+  };
 
   return (
     <>
@@ -62,7 +73,26 @@ function K8sNode({ data, selected }: NodeProps<K8sNodeData>) {
         position={Position.Top}
         className="!bg-muted-foreground !border-card"
       />
-      <div className={`node-base ${config.bgClass} ${selected ? 'ring-2 ring-primary' : ''}`}>
+      <div className={`node-base ${config.bgClass} ${selected ? 'ring-2 ring-primary' : ''} group relative`}>
+        {/* Delete button - shows on hover or when selected */}
+        <button
+          onClick={handleDelete}
+          className={`
+            absolute -top-2 -right-2
+            bg-destructive text-destructive-foreground
+            rounded-full p-1.5 shadow-lg
+            opacity-0 group-hover:opacity-100
+            ${selected ? 'opacity-100' : ''}
+            transition-opacity duration-200
+            hover:bg-destructive/90
+            z-10
+          `}
+          title="Delete node"
+          aria-label="Delete node"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+
         <div className="node-header">
           <Icon className={`node-icon ${config.colorClass}`} />
           <span className="node-title">{data.label}</span>
