@@ -1,15 +1,16 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { 
-  Globe, 
-  Server, 
-  Box, 
-  FileText, 
-  Key, 
-  HardDrive, 
-  Clock, 
+import {
+  Globe,
+  Server,
+  Box,
+  FileText,
+  Key,
+  HardDrive,
+  Clock,
   Activity,
-  Container
+  Container,
+  Layers
 } from 'lucide-react';
 import { K8sNodeData, K8sNodeType } from '@/types/k8s';
 
@@ -23,6 +24,7 @@ const nodeConfig: Record<K8sNodeType, { icon: React.ElementType; colorClass: str
   cronjob: { icon: Clock, colorClass: 'text-[hsl(var(--node-cronjob))]', bgClass: 'border-[hsl(var(--node-cronjob))]' },
   hpa: { icon: Activity, colorClass: 'text-[hsl(var(--node-hpa))]', bgClass: 'border-[hsl(var(--node-hpa))]' },
   pod: { icon: Container, colorClass: 'text-[hsl(var(--node-pod))]', bgClass: 'border-[hsl(var(--node-pod))]' },
+  sidecar: { icon: Layers, colorClass: 'text-[hsl(var(--node-sidecar))]', bgClass: 'border-[hsl(var(--node-sidecar))]' },
 };
 
 function getNodeSummary(data: K8sNodeData): string[] {
@@ -45,6 +47,8 @@ function getNodeSummary(data: K8sNodeData): string[] {
       return [`${data.minReplicas}-${data.maxReplicas}`, `CPU: ${data.cpuTarget}%`];
     case 'pod':
       return [data.image];
+    case 'sidecar':
+      return [data.image, `Purpose: ${data.purpose}`];
     default:
       return [];
   }

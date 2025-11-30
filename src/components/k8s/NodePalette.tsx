@@ -1,13 +1,14 @@
-import { 
-  Globe, 
-  Server, 
-  Box, 
-  FileText, 
-  Key, 
-  HardDrive, 
-  Clock, 
+import {
+  Globe,
+  Server,
+  Box,
+  FileText,
+  Key,
+  HardDrive,
+  Clock,
   Activity,
-  Container
+  Container,
+  Layers
 } from 'lucide-react';
 import { K8sNodeType } from '@/types/k8s';
 
@@ -20,6 +21,7 @@ const paletteItems: { type: K8sNodeType; label: string; icon: React.ElementType;
   { type: 'service', label: 'Service', icon: Server, colorClass: 'text-[hsl(var(--node-service))]' },
   { type: 'deployment', label: 'Deployment', icon: Box, colorClass: 'text-[hsl(var(--node-deployment))]' },
   { type: 'pod', label: 'Pod', icon: Container, colorClass: 'text-[hsl(var(--node-pod))]' },
+  { type: 'sidecar', label: 'Sidecar', icon: Layers, colorClass: 'text-[hsl(var(--node-sidecar))]' },
   { type: 'configmap', label: 'ConfigMap', icon: FileText, colorClass: 'text-[hsl(var(--node-configmap))]' },
   { type: 'secret', label: 'Secret', icon: Key, colorClass: 'text-[hsl(var(--node-secret))]' },
   { type: 'pvc', label: 'PVC', icon: HardDrive, colorClass: 'text-[hsl(var(--node-pvc))]' },
