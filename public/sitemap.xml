@@ -12,4 +12,12 @@
     <priority>1.0</priority>
   </url>
 
+  <!-- Interactive YAML Tutorial -->
+  <url>
+    <loc>https://k8sdiagram.fun/tutorial</loc>
+    <lastmod>2025-11-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
 </urlset>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ReactFlow, {
   Background,
   BackgroundVariant,
@@ -22,6 +23,7 @@ import { generateYamlFromGraph } from '@/utils/yamlGenerator';
 import {
   ChevronDown,
   Github,
+  GraduationCap,
   LayoutTemplate,
   Plus,
   Save,
@@ -40,6 +42,7 @@ let nodeId = 0;
 const getNodeId = () => `node_${nodeId++}`;
 
 export default function DiagramBuilder() {
+  const navigate = useNavigate();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<K8sNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -219,6 +222,10 @@ export default function DiagramBuilder() {
             <button onClick={clearDiagram} className="btn-ghost">
               <Plus className="w-4 h-4" />
               New
+            </button>
+            <button onClick={() => navigate('/tutorial')} className="btn-ghost text-blue-600">
+              <GraduationCap className="w-4 h-4" />
+              Learn YAML
             </button>
             <div className="relative">
               <button
