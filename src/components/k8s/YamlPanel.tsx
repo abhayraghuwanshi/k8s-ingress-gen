@@ -1,9 +1,14 @@
 import { useState, useMemo, useCallback } from 'react';
-import Editor from '@monaco-editor/react';
+import Editor, { loader } from '@monaco-editor/react';
 import { Copy, Download, Check, Package } from 'lucide-react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { GeneratedYaml } from '@/types/k8s';
+import * as monaco from 'monaco-editor';
+
+// Configure Monaco Editor to use self-hosted version instead of CDN
+// This prevents tracking protection issues in browsers
+loader.config({ monaco });
 
 interface YamlPanelProps {
   yamls: GeneratedYaml;
