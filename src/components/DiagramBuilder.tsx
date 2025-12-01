@@ -16,21 +16,22 @@ import 'reactflow/dist/style.css';
 
 import { useToast } from '@/hooks/use-toast';
 import { K8sNodeData, K8sNodeType, defaultNodeData } from '@/types/k8s';
+import { TemplateItem } from '@/types/template';
 import { hasExistingConnection, validateConnection } from '@/utils/connectionRules';
 import { clearDiagramState, createAutoSave, loadDiagramState, saveDiagramState } from '@/utils/diagramStorage';
-import { DiagramTemplate, templates } from '@/utils/templates';
+import { DiagramTemplate } from '@/utils/templates';
 import { generateYamlFromGraph } from '@/utils/yamlGenerator';
+import { fetchTemplateYaml, parseYamlToGraph } from '@/utils/yamlParser';
 import {
-  ChevronDown,
   Code,
   Github,
   GraduationCap,
-  LayoutTemplate,
   Menu,
   Plus,
   Save,
   Settings,
   Trash2,
+  Upload,
   X
 } from 'lucide-react';
 import K8sNode from './k8s/K8sNode';
@@ -229,6 +230,80 @@ export default function DiagramBuilder() {
     setShowTemplates(false);
   }, [setNodes, setEdges]);
 
+  const handleTemplateSelect = useCallback(async (template: TemplateItem) => {
+    try {
+      const { nodes: templateNodes, edges: templateEdges } = await fetchTemplateYaml(template.path);
+
+      // Update nodeId counter to avoid conflicts
+      const maxId = templateNodes.reduce((max, node) => {
+        const id = parseInt(node.id.replace('node_', ''));
+        return isNaN(id) ? max : Math.max(max, id);
+      }, nodeId);
+      nodeId = maxId + 1;
+
+      setNodes(templateNodes);
+      setEdges(templateEdges);
+      setSelectedNode(null);
+      setShowPalette(false); // Close mobile palette after loading template
+
+      toast({
+        title: "Template loaded",
+        description: `${template.title} has been loaded to the canvas`,
+      });
+    } catch (error) {
+      console.error('Error loading template:', error);
+      toast({
+        title: "Failed to load template",
+        description: error instanceof Error ? error.message : "An error occurred while loading the template",
+        variant: "destructive",
+      });
+    }
+  }, [setNodes, setEdges, toast]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportYaml = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const yamlText = await file.text();
+      const { nodes: importedNodes, edges: importedEdges } = await parseYamlToGraph(yamlText);
+
+      // Update nodeId counter to avoid conflicts
+      const maxId = importedNodes.reduce((max, node) => {
+        const id = parseInt(node.id.replace('node_', ''));
+        return isNaN(id) ? max : Math.max(max, id);
+      }, nodeId);
+      nodeId = maxId + 1;
+
+      setNodes(importedNodes);
+      setEdges(importedEdges);
+      setSelectedNode(null);
+
+      toast({
+        title: "YAML imported",
+        description: `Successfully loaded ${importedNodes.length} resources from ${file.name}`,
+      });
+    } catch (error) {
+      console.error('Error importing YAML:', error);
+      toast({
+        title: "Failed to import YAML",
+        description: error instanceof Error ? error.message : "An error occurred while importing the YAML file",
+        variant: "destructive",
+      });
+    }
+
+    // Reset input so same file can be selected again
+    if (event.target) {
+      event.target.value = '';
+    }
+  }, [setNodes, setEdges, toast]);
+
   const clearDiagram = useCallback(() => {
     setNodes([]);
     setEdges([]);
@@ -284,11 +359,15 @@ export default function DiagramBuilder() {
               <Plus className="w-4 h-4" />
               New
             </button>
+            <button onClick={handleImportYaml} className="btn-ghost">
+              <Upload className="w-4 h-4" />
+              Import YAML
+            </button>
             <button onClick={() => navigate('/tutorial')} className="btn-ghost text-blue-600">
               <GraduationCap className="w-4 h-4" />
               Learn YAML
             </button>
-            <div className="relative">
+            {/* <div className="relative">
               <button
                 onClick={() => setShowTemplates(!showTemplates)}
                 className="btn-ghost"
@@ -311,7 +390,7 @@ export default function DiagramBuilder() {
                   ))}
                 </div>
               )}
-            </div>
+            </div> */}
             <button onClick={clearDiagram} className="btn-ghost text-destructive">
               <Trash2 className="w-4 h-4" />
               Clear
@@ -353,7 +432,7 @@ export default function DiagramBuilder() {
             </div>
           )}
           <a
-            href="https://github.com"
+            href="https://github.com/abhayraghuwanshi/k8s-ingress-gen"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-ghost hidden sm:inline-flex"
@@ -370,7 +449,7 @@ export default function DiagramBuilder() {
         <aside className={`
           ${showPalette ? 'absolute' : 'hidden'}
           md:relative md:block
-          w-52
+          w-72
           border-r border-border
           flex-shrink-0
           bg-background
@@ -386,7 +465,7 @@ export default function DiagramBuilder() {
             >
               <X className="w-4 h-4" />
             </button>
-            <NodePalette onDragStart={onDragStart} onNodeClick={addNodeToCanvas} />
+            <NodePalette onDragStart={onDragStart} onNodeClick={addNodeToCanvas} onTemplateSelect={handleTemplateSelect} />
           </div>
         </aside>
 
@@ -494,6 +573,15 @@ export default function DiagramBuilder() {
           </div>
         </aside>
       </div>
+
+      {/* Hidden file input for YAML import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".yaml,.yml"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
     </div>
   );
 }
