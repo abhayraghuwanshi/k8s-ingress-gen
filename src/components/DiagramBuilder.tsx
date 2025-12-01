@@ -16,16 +16,16 @@ import 'reactflow/dist/style.css';
 
 import { useToast } from '@/hooks/use-toast';
 import { K8sNodeData, K8sNodeType, defaultNodeData } from '@/types/k8s';
+import { TemplateItem } from '@/types/template';
 import { hasExistingConnection, validateConnection } from '@/utils/connectionRules';
 import { clearDiagramState, createAutoSave, loadDiagramState, saveDiagramState } from '@/utils/diagramStorage';
-import { DiagramTemplate, templates } from '@/utils/templates';
+import { DiagramTemplate } from '@/utils/templates';
 import { generateYamlFromGraph } from '@/utils/yamlGenerator';
+import { fetchTemplateYaml } from '@/utils/yamlParser';
 import {
-  ChevronDown,
   Code,
   Github,
   GraduationCap,
-  LayoutTemplate,
   Menu,
   Plus,
   Save,
@@ -229,6 +229,36 @@ export default function DiagramBuilder() {
     setShowTemplates(false);
   }, [setNodes, setEdges]);
 
+  const handleTemplateSelect = useCallback(async (template: TemplateItem) => {
+    try {
+      const { nodes: templateNodes, edges: templateEdges } = await fetchTemplateYaml(template.path);
+
+      // Update nodeId counter to avoid conflicts
+      const maxId = templateNodes.reduce((max, node) => {
+        const id = parseInt(node.id.replace('node_', ''));
+        return isNaN(id) ? max : Math.max(max, id);
+      }, nodeId);
+      nodeId = maxId + 1;
+
+      setNodes(templateNodes);
+      setEdges(templateEdges);
+      setSelectedNode(null);
+      setShowPalette(false); // Close mobile palette after loading template
+
+      toast({
+        title: "Template loaded",
+        description: `${template.title} has been loaded to the canvas`,
+      });
+    } catch (error) {
+      console.error('Error loading template:', error);
+      toast({
+        title: "Failed to load template",
+        description: error instanceof Error ? error.message : "An error occurred while loading the template",
+        variant: "destructive",
+      });
+    }
+  }, [setNodes, setEdges, toast]);
+
   const clearDiagram = useCallback(() => {
     setNodes([]);
     setEdges([]);
@@ -288,7 +318,7 @@ export default function DiagramBuilder() {
               <GraduationCap className="w-4 h-4" />
               Learn YAML
             </button>
-            <div className="relative">
+            {/* <div className="relative">
               <button
                 onClick={() => setShowTemplates(!showTemplates)}
                 className="btn-ghost"
@@ -311,7 +341,7 @@ export default function DiagramBuilder() {
                   ))}
                 </div>
               )}
-            </div>
+            </div> */}
             <button onClick={clearDiagram} className="btn-ghost text-destructive">
               <Trash2 className="w-4 h-4" />
               Clear
@@ -386,7 +416,7 @@ export default function DiagramBuilder() {
             >
               <X className="w-4 h-4" />
             </button>
-            <NodePalette onDragStart={onDragStart} onNodeClick={addNodeToCanvas} />
+            <NodePalette onDragStart={onDragStart} onNodeClick={addNodeToCanvas} onTemplateSelect={handleTemplateSelect} />
           </div>
         </aside>
 
