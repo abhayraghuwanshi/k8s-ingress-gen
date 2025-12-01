@@ -31,8 +31,8 @@ import {
   Save,
   Settings,
   Trash2,
-  X,
-  Upload
+  Upload,
+  X
 } from 'lucide-react';
 import K8sNode from './k8s/K8sNode';
 import NodePalette from './k8s/NodePalette';
@@ -432,7 +432,7 @@ export default function DiagramBuilder() {
             </div>
           )}
           <a
-            href="https://github.com"
+            href="https://github.com/abhayraghuwanshi/k8s-ingress-gen"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-ghost hidden sm:inline-flex"
@@ -449,7 +449,7 @@ export default function DiagramBuilder() {
         <aside className={`
           ${showPalette ? 'absolute' : 'hidden'}
           md:relative md:block
-          w-52
+          w-72
           border-r border-border
           flex-shrink-0
           bg-background
