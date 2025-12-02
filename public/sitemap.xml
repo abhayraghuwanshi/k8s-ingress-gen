@@ -6,17 +6,17 @@
   <!-- Homepage / Diagram Builder -->
   <url>
     <loc>https://k8sdiagram.fun/</loc>
-    <lastmod>2025-11-30</lastmod>
+    <lastmod>2025-12-03</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 
   <!-- Interactive YAML Tutorial -->
   <url>
-    <loc> </loc>
-    <lastmod>2025-11-30</lastmod>
+    <loc>https://k8sdiagram.fun/tutorial</loc>
+    <lastmod>2025-12-03</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.8</priority>
   </url>
 
 </urlset>

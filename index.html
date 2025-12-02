@@ -1,62 +1,69 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Primary Meta Tags -->
-    <title>K8s Diagram Builder - Free Visual Kubernetes Architecture Designer & YAML Generator</title>
-    <meta name="title" content="K8s Diagram Builder - Free Visual Kubernetes Architecture Designer & YAML Generator" />
-    <meta name="description" content="Build Kubernetes diagrams visually with drag-and-drop. Auto-generate production-ready YAML manifests for Ingress, Services, Deployments, ConfigMaps, Secrets, PVC, HPA, and CronJobs. Free online tool for DevOps engineers, SREs, and cloud architects. No signup required." />
-    <meta name="keywords" content="kubernetes diagram builder, k8s architecture diagram, kubernetes yaml generator, kubernetes visual editor, k8s ingress generator, kubernetes deployment yaml, kubernetes service yaml, kubernetes configmap, kubernetes secret, kubernetes architecture tool, devops tools, kubernetes diagram online, k8s diagram tool, kubernetes visualization, kubernetes manifest generator, kubernetes template generator, kubernetes infrastructure diagram, kubernetes cluster diagram, kubernetes network diagram, cloud native architecture, kubernetes design tool, kubernetes architecture designer, kubernetes blueprint, microservices architecture diagram, kubernetes resource diagram, container orchestration diagram, kubernetes workflow diagram, kubernetes deployment diagram, kubernetes topology diagram" />
-    <meta name="author" content="K8s Diagram Builder" />
-    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
-    <meta name="language" content="English" />
-    <meta name="revisit-after" content="3 days" />
-    <meta name="rating" content="general" />
-    <meta name="distribution" content="global" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Additional SEO Meta Tags -->
-    <meta name="theme-color" content="#000000" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="K8s Diagram Builder" />
-    <meta name="application-name" content="K8s Diagram Builder" />
-    <meta name="msapplication-TileColor" content="#000000" />
-    <meta name="format-detection" content="telephone=no" />
+  <!-- Primary Meta Tags -->
+  <title>K8s Diagram Builder - Visual Kubernetes YAML Generator</title>
+  <meta name="description"
+    content="Free Kubernetes diagram builder with drag-and-drop design. Auto-generate production-ready YAML for Ingress, Services, Deployments, ConfigMaps, Secrets & more. No signup required." />
+  <meta name="author" content="K8s Diagram Builder" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="language" content="English" />
+  <meta name="revisit-after" content="3 days" />
+  <meta name="rating" content="general" />
+  <meta name="distribution" content="global" />
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="apple-touch-icon" href="/logo.png" />
+  <!-- Additional SEO Meta Tags -->
+  <meta name="theme-color" content="#000000" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="K8s Diagram Builder" />
+  <meta name="application-name" content="K8s Diagram Builder" />
+  <meta name="msapplication-TileColor" content="#000000" />
+  <meta name="format-detection" content="telephone=no" />
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://k8sdiagram.fun/" />
-    <meta property="og:title" content="K8s Diagram Builder - Free Visual Kubernetes Architecture Designer & YAML Generator" />
-    <meta property="og:description" content="Build Kubernetes diagrams visually with drag-and-drop. Auto-generate production-ready YAML manifests for Ingress, Services, Deployments, ConfigMaps, Secrets, and more. Free online tool for DevOps engineers." />
-    <meta property="og:image" content="https://k8sdiagram.fun/logo.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="K8s Diagram Builder - Visual Kubernetes Architecture Designer" />
-    <meta property="og:site_name" content="K8s Diagram Builder" />
-    <meta property="og:locale" content="en_US" />
+  <!-- Performance Optimization -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://k8sdiagram.fun/" />
-    <meta name="twitter:title" content="K8s Diagram Builder - Free Visual Kubernetes Architecture Designer" />
-    <meta name="twitter:description" content="Build Kubernetes diagrams visually with drag-and-drop. Auto-generate production-ready YAML manifests. Free online tool for DevOps engineers." />
-    <meta name="twitter:image" content="https://k8sdiagram.fun/logo.png" />
-    <meta name="twitter:image:alt" content="K8s Diagram Builder - Visual Kubernetes Architecture Designer" />
-    <meta name="twitter:creator" content="@k8sdiagram" />
-    <meta name="twitter:site" content="@k8sdiagram" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="apple-touch-icon" href="/logo.png" />
 
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://k8sdiagram.fun/" />
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://k8sdiagram.fun/" />
+  <meta property="og:title"
+    content="K8s Diagram Builder - Visual Kubernetes YAML Generator" />
+  <meta property="og:description"
+    content="Free Kubernetes diagram builder with drag-and-drop design. Auto-generate production-ready YAML for Ingress, Services, Deployments, ConfigMaps, Secrets & more. No signup required." />
+  <meta property="og:image" content="https://k8sdiagram.fun/logo.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="K8s Diagram Builder - Visual Kubernetes Architecture Designer" />
+  <meta property="og:site_name" content="K8s Diagram Builder" />
+  <meta property="og:locale" content="en_US" />
 
-    <!-- Schema.org markup for Google -->
-    <script type="application/ld+json">
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://k8sdiagram.fun/" />
+  <meta name="twitter:title" content="K8s Diagram Builder - Visual Kubernetes YAML Generator" />
+  <meta name="twitter:description"
+    content="Free Kubernetes diagram builder with drag-and-drop design. Auto-generate production-ready YAML for Ingress, Services, Deployments & more. No signup required." />
+  <meta name="twitter:image" content="https://k8sdiagram.fun/logo.png" />
+  <meta name="twitter:image:alt" content="K8s Diagram Builder - Visual Kubernetes Architecture Designer" />
+  <meta name="twitter:creator" content="@k8sdiagram" />
+  <meta name="twitter:site" content="@k8sdiagram" />
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://k8sdiagram.fun/" />
+
+  <!-- Schema.org markup for Google -->
+  <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
@@ -104,8 +111,8 @@
     }
     </script>
 
-    <!-- Additional structured data for SoftwareApplication -->
-    <script type="application/ld+json">
+  <!-- Additional structured data for SoftwareApplication -->
+  <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
@@ -125,8 +132,8 @@
     }
     </script>
 
-    <!-- BreadcrumbList for better navigation -->
-    <script type="application/ld+json">
+  <!-- BreadcrumbList for better navigation -->
+  <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
@@ -138,10 +145,115 @@
       }]
     }
     </script>
-  </head>
 
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+  <!-- FAQ Schema for Rich Snippets -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is K8s Diagram Builder?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "K8s Diagram Builder is a free online tool for creating Kubernetes architecture diagrams visually with drag-and-drop. It auto-generates production-ready YAML manifests for Ingress, Services, Deployments, ConfigMaps, Secrets, PVC, HPA, and CronJobs. No signup required."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I create a Kubernetes diagram?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Simply drag Kubernetes resources from the left palette onto the canvas, configure their properties, and connect them visually. The tool will automatically validate connections and generate YAML manifests based on your diagram."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I export YAML manifests from my Kubernetes diagram?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! K8s Diagram Builder automatically generates production-ready YAML manifests as you design your architecture. You can preview the YAML in real-time and export all manifests with a single click."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is K8s Diagram Builder free to use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, K8s Diagram Builder is completely free to use. No signup, registration, or payment required. All features are available for free."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What Kubernetes resources are supported?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "K8s Diagram Builder supports Ingress, Service (ClusterIP, NodePort, LoadBalancer), Deployment, StatefulSet, ConfigMap, Secret, PersistentVolumeClaim (PVC), HorizontalPodAutoscaler (HPA), and CronJob resources. Sidecar containers and volume mounts are also supported."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I import existing Kubernetes YAML files?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! You can import existing YAML manifests and the tool will automatically parse them and create a visual diagram showing the relationships between your Kubernetes resources. You can also use pre-built templates from GitHub."
+          }
+        }
+      ]
+    }
+    </script>
+</head>
+
+<body>
+  <div id="root">
+    <!-- SEO Content (hidden when React loads) -->
+    <header>
+      <h1>K8s Diagram Builder - Free Visual Kubernetes YAML Generator</h1>
+    </header>
+    <main>
+      <section>
+        <h2>Build Kubernetes Diagrams Visually</h2>
+        <p>K8s Diagram Builder is a free online tool that lets you design cloud-native Kubernetes architectures with drag-and-drop simplicity. Auto-generate production-ready YAML manifests for all your Kubernetes resources.</p>
+      </section>
+      <section>
+        <h2>Key Features</h2>
+        <ul>
+          <li><strong>Visual Kubernetes Diagram Builder</strong> - Drag-and-drop interface for designing K8s architectures</li>
+          <li><strong>Auto-Generate YAML Manifests</strong> - Export production-ready Kubernetes YAML files instantly</li>
+          <li><strong>Comprehensive Resource Support</strong> - Ingress, Service, Deployment, ConfigMap, Secret, PVC, HPA, CronJob</li>
+          <li><strong>Smart Connection Validation</strong> - Follow Kubernetes best practices automatically</li>
+          <li><strong>GitHub Templates</strong> - Import pre-built Kubernetes architecture templates</li>
+          <li><strong>Real-time YAML Preview</strong> - See your Kubernetes manifests as you design</li>
+          <li><strong>Free & No Signup Required</strong> - Start building Kubernetes diagrams immediately</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Perfect for DevOps Engineers & SREs</h2>
+        <p>Whether you're designing microservices architectures, planning Kubernetes deployments, or learning container orchestration, K8s Diagram Builder simplifies the process of creating Kubernetes infrastructure diagrams and generating deployment-ready YAML manifests.</p>
+      </section>
+      <section>
+        <h2>Supported Kubernetes Resources</h2>
+        <ul>
+          <li>Kubernetes Ingress - Configure ingress controllers and routing rules</li>
+          <li>Kubernetes Service - Create ClusterIP, NodePort, LoadBalancer services</li>
+          <li>Kubernetes Deployment - Define containerized applications with replicas</li>
+          <li>Kubernetes ConfigMap - Manage application configuration data</li>
+          <li>Kubernetes Secret - Store sensitive information securely</li>
+          <li>Kubernetes PersistentVolumeClaim - Configure storage for pods</li>
+          <li>Kubernetes HorizontalPodAutoscaler - Auto-scale based on metrics</li>
+          <li>Kubernetes CronJob - Schedule periodic jobs</li>
+        </ul>
+      </section>
+    </main>
+    <noscript>
+      <p style="padding: 20px; background: #fff3cd; border: 1px solid #ffc107; margin: 20px; border-radius: 4px;">
+        <strong>JavaScript Required:</strong> K8s Diagram Builder requires JavaScript to be enabled in your browser.
+        Please enable JavaScript to use this visual Kubernetes architecture designer and YAML generator.
+      </p>
+    </noscript>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>
